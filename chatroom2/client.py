@@ -21,7 +21,7 @@ def welcome_view():
     window_welcome.iconbitmap('chat.ico')
 
     # label_users = tk.Label(window_welcome, text="目前總用戶數")
-    label_name = tk.Label(window_welcome, justify=CENTER, text="請輸入用戶名字: ")
+    label_name = tk.Label(window_welcome, text="請輸入用戶名字: ")
     input_text = tk.Entry(window_welcome, textvariable="username")
     btn = tk.Button(window_welcome, text="登入", command=lambda: login_in(window_welcome, input_text.get()))
     
