@@ -11,6 +11,7 @@ class GUI:
     def __init__(self, master):
         self.root = master
         self.chat_transcript_area = None
+        self.user_list_area = None
         self.name_widget = None
         self.enter_text_widget = None
         self.join_button = None
@@ -35,26 +36,31 @@ class GUI:
         thread.start()
 
     def receive_message_from_server(self, so):
-        now = datetime.datetime.now()
-        while True:
-            buffer = so.recv(256)
-            if not buffer:
-                break
-            message = buffer.decode('utf-8')
-         
-            if "joined" in message:
-                user = message.split(":")[1]
-                message =  f"[{now}] {user} has joined"
-            self.chat_transcript_area.insert('end', message + '\n')
-            self.chat_transcript_area.yview(END)
-        so.close()
+        try:
+            while True:
+                buffer = so.recv(256)
+                if not buffer:
+                    break
+                message = buffer.decode('utf-8')
+                print(f'[client get] {message}')
+
+                if "user_list" in message:
+                    lst = message.split(':')[-1].strip()
+                    self.user_list_area.delete("1.0", tk.END)
+                    self.user_list_area.insert('end', lst)
+                else:
+                    self.chat_transcript_area.insert('end', message + '\n')
+                    self.chat_transcript_area.yview(END)
+            so.close()
+        except ConnectionAbortedError:
+            print(f"quit")
 
     def display_user_list(self):
         frame = Frame()
-        listbox = tk.Listbox()
-        listbox.insert(END, f'------用戶列表------')
-        listbox.insert(tk.END, self.name_widget.get().strip())
-        listbox.pack(side='left', fill=tk.BOTH)
+        self.user_list_area = Text(frame, width=20)
+        # self.user_list_area.insert('end', f'------用戶列表------\n')
+        self.user_list_area.bind('<KeyPress>', lambda e: 'break')
+        self.user_list_area.pack(side='left', fill=tk.BOTH)
         frame.pack(side='left')
 
     def display_name_section(self):
@@ -85,16 +91,18 @@ class GUI:
         frame.pack()
 
     def on_join(self):
-        self.display_user_list()
-        self.display_chat_box()
-        self.display_chat_input_box()
-
+        now = datetime.datetime.now()
         if len(self.name_widget.get()) == 0:
             messagebox.showerror(
                 "Enter your name", "Enter your name to send a message")
             return
+
+        self.display_user_list()
+        self.display_chat_box()
+        self.display_chat_input_box()
+
         self.name_widget.config(state='disabled')
-        self.client_socket.send(("joined:" + self.name_widget.get()).encode('utf-8'))
+        self.client_socket.send((f"[{now}] {self.name_widget.get()} 加入聊天室").encode('utf-8'))
 
     def on_enter_key_pressed(self, event):
         if len(self.name_widget.get()) == 0:
@@ -112,8 +120,6 @@ class GUI:
         data = self.enter_text_widget.get(1.0, 'end').strip()
         message = f'[{now}] {senders_name}: {data}'.encode('utf-8')
         
-        self.chat_transcript_area.insert('end', message.decode('utf-8') + '\n')
-        self.chat_transcript_area.yview(END)
         self.client_socket.send(message)
         self.enter_text_widget.delete(1.0, 'end')
         return 'break'
