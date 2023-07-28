@@ -1,0 +1,1 @@
+參考來源: https://copyassignment.com/gui-chat-application-in-python-tkinter/
