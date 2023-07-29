@@ -47,8 +47,8 @@ class ChatServer:
                     break
                 self.received_message = incoming_buffer.decode('utf-8')
 
-                if "joined" in self.received_message:
-                    user = re.findall(r"] (\w+) joined", self.received_message)[0]
+                if "加入" in self.received_message:
+                    user = re.findall(r"] (\w+) 加入", self.received_message)[0]
                     self.user_list[socket] = user
                     msg = '------用戶列表------\n'+'\n'.join(self.user_list.values())
                     # print(msg)
@@ -65,8 +65,7 @@ class ChatServer:
 
             msg = '------用戶列表------\n'+'\n'.join(self.user_list.values())
             self.broadcast_to_all_clients(f'user_list: {msg}')
-            self.broadcast_to_all_clients(f'[{datetime.datetime.now()}] {name_quit} 離開了聊天室')
-            
+            self.broadcast_to_all_clients(f'[{datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}] {name_quit} 離開了聊天室')
     
     def broadcast_to_all_clients(self, message):
         for socket in self.socket_list:

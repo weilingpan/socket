@@ -4,7 +4,7 @@ import socket
 import threading
 import datetime
 
-class GUI:
+class ChatGUI:
     client_socket = None
     last_received_message = None
     
@@ -15,6 +15,7 @@ class GUI:
         self.name_widget = None
         self.enter_text_widget = None
         self.join_button = None
+        
         self.initialize_socket()
         self.initialize_gui()
         self.listen_for_incoming_messages_in_a_thread()
@@ -30,6 +31,7 @@ class GUI:
         self.root.resizable(0, 0)
         self.root.iconbitmap('chat.ico')
         self.display_name_section()
+        self.name_widget.focus() #預設游標位置
         
     def listen_for_incoming_messages_in_a_thread(self):
         thread = threading.Thread(target=self.receive_message_from_server, args=(self.client_socket,)) # Create a thread for the send and receive in same time 
@@ -58,9 +60,8 @@ class GUI:
     def display_user_list(self):
         frame = Frame()
         self.user_list_area = Text(frame, width=20)
-        # self.user_list_area.insert('end', f'------用戶列表------\n')
         self.user_list_area.bind('<KeyPress>', lambda e: 'break')
-        self.user_list_area.pack(side='left', fill=tk.BOTH)
+        self.user_list_area.pack(side='left')
         frame.pack(side='left')
 
     def display_name_section(self):
@@ -68,7 +69,8 @@ class GUI:
         Label(frame, text='Enter Your Name: ', font=("arial", 13,"bold")).pack(side='left', pady=20)
         self.name_widget = Entry(frame, width=60, font=("arial", 13))
         self.name_widget.pack(side='left', anchor='e', pady=15)
-        self.join_button = Button(frame, text="Join", width=10, command=self.on_join).pack(side='right', padx=5, pady=15)
+        self.join_button = Button(frame, text="Join", width=10, command=self.on_join)
+        self.join_button.pack(side='right', padx=5, pady=15)
         frame.pack(side='top', anchor='nw')
 
     def display_chat_box(self):
@@ -86,52 +88,51 @@ class GUI:
         frame = Frame()
         Label(frame, text='Enter Your Message', font=("arial", 12, "bold")).pack(side='top')
         self.enter_text_widget = Text(frame, width=62, height=3, font=("arial", 12))
-        self.enter_text_widget.pack(side='left')
+        self.enter_text_widget.pack(side='top', padx=15, pady=(0, 10))
         self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
         frame.pack()
 
     def on_join(self):
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        #TODO: 確認暱稱是否重複
         if len(self.name_widget.get()) == 0:
             messagebox.showerror(
-                "Enter your name", "Enter your name to send a message")
+                "登入錯誤", "請輸入暱稱")
             return
+
+        self.name_widget.config(state='disabled')
+        self.join_button.config(state='disabled')
 
         self.display_user_list()
         self.display_chat_box()
         self.display_chat_input_box()
-
-        self.name_widget.config(state='disabled')
+        self.enter_text_widget.focus_set() #預設游標位置
         self.client_socket.send((f"[{now}] {self.name_widget.get()} 加入聊天室").encode('utf-8'))
 
     def on_enter_key_pressed(self, event):
-        if len(self.name_widget.get()) == 0:
-            messagebox.showerror("Enter your name", "Enter your name to send a message")
-            return
         self.send_chat()
         self.clear_text()
-
+        return 'break'  # 阻止預設換行行為
+        
     def clear_text(self):
-        self.enter_text_widget.delete(1.0, 'end')
+        self.enter_text_widget.delete(1.0,'end')
 
     def send_chat(self):
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         senders_name = self.name_widget.get().strip()
-        data = self.enter_text_widget.get(1.0, 'end').strip()
+        data = self.enter_text_widget.get(1.0, 'end-1c').strip() #使用 end-1c 表示取得倒數第二個字元 ( 因為最後一個字元是換行符 )
         message = f'[{now}] {senders_name}: {data}'.encode('utf-8')
-        
         self.client_socket.send(message)
-        self.enter_text_widget.delete(1.0, 'end')
-        return 'break'
+        self.clear_text()        
 
     def on_close_window(self):
-        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+        if messagebox.askokcancel("離開視窗", "確定要離開嗎?"):
             self.root.destroy()
             self.client_socket.close()
             exit(0)
 
 if __name__ == '__main__':
     root = Tk()
-    gui = GUI(root)
+    gui = ChatGUI(root)
     root.protocol("WM_DELETE_WINDOW", gui.on_close_window)
     root.mainloop()
